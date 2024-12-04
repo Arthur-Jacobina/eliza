@@ -1,7 +1,7 @@
 import { PostgresDatabaseAdapter } from "@ai16z/adapter-postgres";
 import { SqliteDatabaseAdapter } from "@ai16z/adapter-sqlite";
 import { AutoClientInterface } from "@ai16z/client-auto";
-import { DirectClientInterface } from "@ai16z/client-direct";
+import { DirectClient, DirectClientInterface } from "@ai16z/client-direct";
 import { DiscordClientInterface } from "@ai16z/client-discord";
 import { TelegramClientInterface } from "@ai16z/client-telegram";
 import { TwitterClientInterface } from "@ai16z/client-twitter";
@@ -9,6 +9,7 @@ import {
     AgentRuntime,
     CacheManager,
     Character,
+    Client,
     DbCacheAdapter,
     FsCacheAdapter,
     IAgentRuntime,
@@ -43,6 +44,8 @@ import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
 import yargs from "yargs";
+import { yotsuba } from "../yotsuba";
+import { miku } from "../miku";
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -453,14 +456,14 @@ async function startAgent(character: Character, directClient) {
         throw error;
     }
 }
-
+let directClient: unknown
 const startAgents = async () => {
-    const directClient = await DirectClientInterface.start();
+    directClient = await DirectClientInterface.start();
     const args = parseArguments();
 
     let charactersArg = args.characters || args.character;
 
-    let characters = [defaultCharacter];
+    let characters = [yotsuba];
 
     if (charactersArg) {
         characters = await loadCharacters(charactersArg);
@@ -503,6 +506,26 @@ const rl = readline.createInterface({
 async function handleUserInput(input, agentId) {
     if (input.toLowerCase() === "exit") {
         gracefulExit();
+    }
+
+    // testing to create a new agent while running the program
+    if (input.toLowerCase() === "create") {
+        // const directClient = await DirectClientInterface.start();
+        const args = parseArguments();
+
+        let charactersArg = args.characters || args.character;
+        let characters = [miku];
+        if (charactersArg) {
+            characters = await loadCharacters(charactersArg);
+        }
+
+        try {
+            for (const character of characters) {
+                await startAgent(character, directClient);
+            }
+        } catch (error) {
+            elizaLogger.error("Error starting agents:", error);
+        }
     }
 
     try {
